@@ -1,0 +1,4 @@
+numpy
+azure.ai.documentintelligence
+azure.ai.vision.imageanalysis
+azure.core.credentials
