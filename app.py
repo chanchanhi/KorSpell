@@ -48,7 +48,11 @@ css_custom = """
     </style>
 """
 
-# --- OCR 처리 함수들 ---
+# --- 한글 + roman num(논문 Pdf에서 많이 사용해서 예외적으로) 필터링하는 함수 ---
+def filter_korean_text(text):
+    return re.sub(r"[^가-힣0-9\s.,!?\u2160-\u216F]", "", text)
+
+# --- 이미지 OCR 처리 함수 ---
 def handle_image_upload(file):
     # env - endpoint/api key
     load_dotenv()
@@ -84,15 +88,18 @@ def handle_image_upload(file):
         if result.read:
             for block in result.read.blocks:
                 for line in block.lines:
-                    for word in line.words:
-                        filtered_text = filter_korean_text(word.text)
-                        extracted_lines.append(filtered_text)
-                        if filtered_text.strip():  # 공백이나 빈 문자열은 제외
-                            backend_data.append({
-                                "text": filtered_text,
-                                "polygon": word.bounding_polygon,
-                                "confidence": word.confidence
-                            })
+                    line_text = filter_korean_text(line.text)
+                    if line_text.strip():
+                        extracted_lines.append(line_text)
+
+                        for word in line.words:
+                            filtered_text = filter_korean_text(word.text)
+                            if filtered_text.strip():
+                                backend_data.append({
+                                    "text": filtered_text,
+                                    "polygon": word.bounding_polygon,
+                                    "confidence": word.confidence
+                                })
                             
         frontend_text = "\n".join(extracted_lines)
 
@@ -102,10 +109,6 @@ def handle_image_upload(file):
 
     except Exception as e:
         return gr.update(value=f"[이미지 OCR 오류] {str(e)}")
-    
-# --- 한글만 필터링하는 함수 ---
-def filter_korean_text(text):
-    return re.sub(r"[^가-힣0-9\s.,!?]", "", text)
 
 # --- pdf에서 줄이 달라지는 부분에서 강제적으로 줄바꿈되는 현상 ---
 def clean_linebreaks(text):
@@ -127,6 +130,25 @@ def clean_linebreaks(text):
 
     return ''.join(cleaned)
 
+# --- pdf 파일 구조 기반 수정 ---
+def parse_paragraphs_from_result(result):
+    # result.paragraphs는 이미 content 필드가 있으므로 바로 사용 가능
+    paragraphs = result.paragraphs
+    cleaned_paragraphs = []
+
+    for p in paragraphs:
+        text = p.content.strip()
+
+        # 페이지 넘버나 주석(예: "2 국어교육연구 제31집") 같은 것 제외
+        if len(text) < 5 or re.match(r"^\d+\s+[가-힣]", text):
+            continue
+        if text.startswith("*") or "제" in text and "집" in text:
+            continue
+
+        cleaned_paragraphs.append(text)
+
+    return "\n\n".join(cleaned_paragraphs)
+
 # --- pdf 파일 ocr ---
 def handle_pdf_upload(file):
     load_dotenv()
@@ -146,17 +168,13 @@ def handle_pdf_upload(file):
         return gr.update() #초기화버튼 클릭시 pdf 파일이 None으로 설정됨
     try:
         with open(file.name, "rb") as f:
-            poller = client.begin_analyze_document("prebuilt-read", f)
+            poller = client.begin_analyze_document("prebuilt-layout", f)
             result = poller.result()
+        
+        pretty_output = parse_paragraphs_from_result(result)
 
-        lines = []
-        for page in result.pages:
-            for line in page.lines:
-                filtered = filter_korean_text(line.content)
-                lines.append(filtered)
-
-        raw_text = "\n".join(lines)
-        cleaned_text = clean_linebreaks(raw_text)
+        filtered = filter_korean_text(pretty_output)
+        cleaned_text = clean_linebreaks(filtered)
 
         return gr.update(value=cleaned_text)
     
