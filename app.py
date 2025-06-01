@@ -90,16 +90,19 @@ def handle_image_upload(file):
         if result.read:
             for block in result.read.blocks:
                 for line in block.lines:
-                    line_text = line.text
-                    extracted_lines.append(line_text)
                     for word in line.words:
-                        backend_data.append({
-                            "text": word.text,
-                            "polygon": word.bounding_polygon,  # 꼭짓점 4개
-                            "confidence": word.confidence
-                        })
-        filtered_lines = [filter_korean_text(line) for line in extracted_lines]
-        frontend_text = "\n".join(filtered_lines)
+                        filtered_text = filter_korean_text(word.text)
+                        extracted_lines.append(filtered_text)
+                        if filtered_text.strip():  # 공백이나 빈 문자열은 제외
+                            backend_data.append({
+                                "text": filtered_text,
+                                "polygon": word.bounding_polygon,
+                                "confidence": word.confidence
+                            })
+                            
+        frontend_text = "\n".join(extracted_lines)
+
+        print(backend_data)
 
         return gr.update(value=frontend_text), backend_data
 
@@ -108,7 +111,7 @@ def handle_image_upload(file):
     
 # --- 한글만 필터링하는 함수 ---
 def filter_korean_text(text):
-    return re.sub(r"[^가-힣\s.,!?]", "", text)
+    return re.sub(r"[^가-힣0-9\s.,!?]", "", text)
 
 # --- pdf에서 줄이 달라지는 부분에서 강제적으로 줄바꿈되는 현상 ---
 def clean_linebreaks(text):
@@ -155,20 +158,14 @@ def handle_pdf_upload(file):
         lines = []
         for page in result.pages:
             for line in page.lines:
-                lines.append(line.content)
+                filtered = filter_korean_text(line.content)
+                lines.append(filtered)
 
         raw_text = "\n".join(lines)
         cleaned_text = clean_linebreaks(raw_text)
 
         return gr.update(value=cleaned_text)
     
-        # text = ""
-        # with pdfplumber.open(file) as pdf:
-        #     for page in pdf.pages:
-        #         page_text = page.extract_text()
-        #         if page_text:
-        #             text += page_text + "\n"
-        # return gr.update(value=text if text else "[PDF에서 텍스트를 추출하지 못했습니다.]")
     except Exception as e:
         return gr.update(value=f"[PDF OCR 오류] {str(e)}")
 
