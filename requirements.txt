@@ -1,4 +1,10 @@
-numpy
-azure.ai.documentintelligence
-azure.ai.vision.imageanalysis
-azure.core.credentials
+numpy>=1.23
+azure-ai-documentintelligence
+azure-ai-vision-imageanalysis
+azure-core
+dotenv
+gradio
+pytesseract
+pdfplumber
+reportlab
+pillow
