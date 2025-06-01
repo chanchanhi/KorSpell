@@ -9,10 +9,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import tempfile, textwrap, os
-# --- OCR 처리 함수에서 넣어둔 패키지---
-# import pytesseract
-# from PIL import Image
-import pdfplumber
 # --- azure image OCR 처리 함수 ---
 from azure.ai.vision.imageanalysis import ImageAnalysisClient
 from azure.ai.vision.imageanalysis.models import VisualFeatures
@@ -20,8 +16,6 @@ from azure.core.credentials import AzureKeyCredential
 # --- azure pdf OCR 처리 함수 ---
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.documentintelligence import DocumentIntelligenceClient
-from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
-import numpy as np
 # --- env 함수 ---
 from dotenv import load_dotenv
 # --- 한국어만 필터링하기 위한 정규화 라이브러리 --
