@@ -3,6 +3,7 @@
 
 import gradio as gr
 # --- pdf추출에 필요한 패키지 임포트 ---
+# ---
 import os
 import platform
 from reportlab.pdfgen import canvas
